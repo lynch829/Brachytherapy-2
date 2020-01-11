@@ -26,11 +26,11 @@
 #############################END LICENSE##########################################
 
 """
- Script name: Oncentra_Visualizer.py
+ Script name: oncentra_visualizer.py
 
  Description: Integrated tool for visualization of Oncentra structure, plan and dose files
 
- Example usage: python Oncentra_Visualizer structure plan dose
+ Example usage: python oncentra_visualizer -s "/structure file/" -p "/plan file/" -d "/dose file/"
 
  Author: Pedro Martinez
  pedro.enrique.83@gmail.com
@@ -48,7 +48,7 @@ import oncdose
 import oncplan
 import oncstruct
 
-os.environ["ETS_TOOLKIT"] = "wx"
+os.environ["ETS_TOOLKIT"] = "qt4"
 
 
 parser = argparse.ArgumentParser()

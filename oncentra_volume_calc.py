@@ -31,8 +31,17 @@ from shapely import geometry
 from descartes import PolygonPatch
 import alphashape
 
+import chart_studio.plotly as py
+import plotly.graph_objects as go
+from plotly import tools as tls
+
+
+
+
+
 
 os.environ["ETS_TOOLKIT"] = "wx"
+np.set_printoptions(threshold=sys.maxsize)
 
 
 
@@ -41,6 +50,12 @@ os.environ["ETS_TOOLKIT"] = "wx"
 
 def PolyArea(x, y):
     return 0.5*np.abs(np.dot(x, np.roll(y, 1))-np.dot(y, np.roll(x, 1)))
+
+
+
+
+
+
 
 
 
@@ -99,7 +114,7 @@ def process_struct(filename, fig):
 
 
 
-    k = 0
+    k = 0 #iterator for the number of structures
     for j in struct_intersect_list:
         xs_elem = []
         ys_elem = []
@@ -115,10 +130,6 @@ def process_struct(filename, fig):
                 ys = []
                 zs = []
                 for i in range(0, contour[0x3006, 0x0050].VM, 3):
-                    xs.append(contour[0x3006, 0x0050][i])
-                    ys.append(contour[0x3006, 0x0050][i+1])
-                    zs.append(contour[0x3006, 0x0050][i+2])
-
                     xs_elem.append(contour[0x3006, 0x0050][i])
                     ys_elem.append(contour[0x3006, 0x0050][i+1])
                     zs_elem.append(contour[0x3006, 0x0050][i+2])
@@ -156,46 +167,78 @@ def process_struct(filename, fig):
 
 
 
-
-
-
-
-
             x_elem = np.array(xs_elem).astype(np.float)  # this is the collection of points for every element
             y_elem = np.array(ys_elem).astype(np.float)
             z_elem = np.array(zs_elem).astype(np.float)
 
 
 
+
+
             # points_total = np.stack((x_elem, y_elem, z_elem), axis=1)
-            if k == 0:
+            if k == 0: #if structure 0
                 elem_0 = np.stack((x_elem, y_elem, z_elem), axis=1)
-            elif k == 1:
+                hull = ss.ConvexHull(elem_0)
+                print('hull0_stats(volume,area)',hull.volume,hull.area)
+                sphericity_0=(np.pi**(1/3)*(6*hull.volume)**(2/3))/(hull.area)
+                print('sphericity_0=',sphericity_0)
+
+
+                points = go.Scatter3d(mode='markers',
+                                   name='',
+                                   x=x_elem,
+                                   y=y_elem,
+                                   z=z_elem,
+                                   marker=dict(size=2,color='red')
+                                   )
+
+                # simplexes = go.Mesh3d(alphahull=2.0,
+                #                    name='',
+                #                    x=x_elem,
+                #                    y=y_elem,
+                #                    z=z_elem,
+                #                    color='red',  # set the color of simplexes in alpha shape
+                #                    opacity=0.15
+                #                    )
+
+                # fig = go.Figure(data=[points,simplexes])
+                fig = go.Figure(data=[points])
+                # fig.show()
+
+
+
+
+
+
+
+            elif k == 1: #if structure 1
                 elem_1 = np.stack((x_elem, y_elem, z_elem), axis=1)
+                hull = ss.ConvexHull(elem_1)
+                print('hull1_stats(volume,area)',hull.volume, hull.area)
+                sphericity_1=(np.pi**(1/3)*(6*hull.volume)**(2/3))/(hull.area)
+                print('sphericity_1=',sphericity_1)
 
+                points = go.Scatter3d(mode='markers',
+                                   name='',
+                                   x=x_elem,
+                                   y=y_elem,
+                                   z=z_elem,
+                                   marker=dict(size=2,color='red')
+                                   )
 
+                # simplexes = go.Mesh3d(alphahull=2.0,
+                #                    name='',
+                #                    x=x_elem,
+                #                    y=y_elem,
+                #                    z=z_elem,
+                #                    color='red',  # set the color of simplexes in alpha shape
+                #                    opacity=0.15
+                #                    )
 
+                # fig = go.Figure(data=[points,simplexes])
+                fig = go.Figure(data=[points])
+                # fig.show()
 
-
-            # print('Volume inside points is = ', hull.volume)
-            # print('Volume inside points is (Qi) = ', hull2.volume)
-            # print('Total volume inside points is = ', hull_total.volume)
-            #
-            # mlab.figure(bgcolor=(1, 1, 1), fgcolor=(0.0, 0.0, 0.0))
-            # scene = mlab.gcf().scene
-            # scene.renderer.use_depth_peeling = 1
-            #
-            # # using mayavi (temporary until I figure how to make closed surfaces)
-            # col = (roi_color[0] / 255, roi_color[1] / 255, roi_color[2] / 255)
-            # mlab.plot3d(xs_elem, ys_elem, zs_elem, tube_radius=0.1, color=col)
-            # mlab.plot3d(xs_tot, ys_tot, zs_tot, tube_radius=0.1, color=col)
-            #
-            #
-            #
-            # ax_mayavi = mlab.axes(nb_labels=8)
-            # ax_mayavi.axes.font_factor = 1
-            #
-            # mlab.show()
 
 
         except:
@@ -205,10 +248,9 @@ def process_struct(filename, fig):
 
         k = k + 1
 
+    #the section below is for more accurate calculations of the volume
+    exit(0)
 
-
-
-    print(dz)
 
 
     volume_intersection = 0
@@ -221,6 +263,12 @@ def process_struct(filename, fig):
             poly0 = geometry.Polygon(elem_0_select[:, 0:2])
             volume_0 = volume_0 + poly0.area * dz
 
+    #we also need to include the last layer/shape for a more accurate calculation
+    elem_0_select = elem_0[elem_0[:, 2] == elem_0[np.shape(elem_0)[0]-1, 2]]
+    poly0 = geometry.Polygon(elem_0_select[:, 0:2])
+    volume_0 = volume_0 + poly0.area * dz
+
+
 
 
     for i in range(0, np.shape(elem_1)[0] - 1):
@@ -228,6 +276,11 @@ def process_struct(filename, fig):
             elem_1_select = elem_1[elem_1[:, 2] == elem_1[i, 2]]
             poly1 = geometry.Polygon(elem_1_select[:, 0:2])
             volume_1 = volume_1 + poly1.area * dz
+
+    # we also need to include the last layer/shape for a more accurate calculation
+    elem_1_select = elem_1[elem_1[:, 2] == elem_1[np.shape(elem_1)[0]-1, 2]]
+    poly1 = geometry.Polygon(elem_1_select[:, 0:2])
+    volume_1 = volume_1 + poly1.area * dz
 
 
 
@@ -256,8 +309,8 @@ def process_struct(filename, fig):
 
 
     print('volume_intersection=', volume_intersection, 'mm^3')
-    print('volume_', struct_intersect_names_list[0], '=', volume_0, 'mm^3')
-    print('volume_', struct_intersect_names_list[1], '=', volume_1, 'mm^3')
+    print('volume_0', struct_intersect_names_list[0], '=', volume_0, 'mm^3')
+    print('volume_1', struct_intersect_names_list[1], '=', volume_1, 'mm^3')
 
 
 
