@@ -38,6 +38,23 @@ import inquirer
 
 
 
+def find_nearest(array, value): # find the nearest element of the array to a certain value and return the index of that element
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return array[idx], idx
+    # return array[idx]
+
+
+
+
+def find_nearest2D(array2D, dimx, dimy, xvalue, yvalue): # find the nearest element of the array to a certain value and return the index of that element
+    idx = (np.abs(dimx - xvalue)).argmin()
+    idy = (np.abs(dimy - yvalue)).argmin()
+    return array2D[idy,idx]
+    # return array[idx]
+
+
+
 
 
 def fdr_source_weighted(dataset, meas_params):

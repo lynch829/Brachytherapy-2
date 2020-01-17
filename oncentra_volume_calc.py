@@ -249,7 +249,7 @@ def process_struct(filename, fig):
         k = k + 1
 
     #the section below is for more accurate calculations of the volume
-    exit(0)
+    # exit(0)
 
 
 
@@ -311,6 +311,7 @@ def process_struct(filename, fig):
     print('volume_intersection=', volume_intersection, 'mm^3')
     print('volume_0', struct_intersect_names_list[0], '=', volume_0, 'mm^3')
     print('volume_1', struct_intersect_names_list[1], '=', volume_1, 'mm^3')
+    print('Ratio (volume_1/volume_0) (lesion/prostate)=', volume_1/volume_0)
 
 
 
