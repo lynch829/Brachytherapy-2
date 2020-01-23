@@ -39,7 +39,7 @@ try:
 except:
     print('Please enter a valid filename')
     print("Use the following command to run this script")
-    print("python xx-Oncentra.py \"[structures dicom]\" \"[plan dicom]\"")
+    print("python dicom_tag_reader \"[dicom]\" ")
 
 
 process_dicom(filename)

@@ -20,6 +20,7 @@ import sys
 import pydicom
 import numpy as np
 import re
+import csv
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
@@ -38,9 +39,8 @@ import inquirer
 
 
 
-def find_nearest(array, value): # find the nearest element of the array to a certain value and return the index of that element
-    array = np.asarray(array)
-    idx = (np.abs(array - value)).argmin()
+def find_nearest(array, dim, value): # find the nearest element of the array to a certain value and return the index of that element
+    idx = (np.abs(dim - value)).argmin()
     return array[idx], idx
     # return array[idx]
 
@@ -50,7 +50,7 @@ def find_nearest(array, value): # find the nearest element of the array to a cer
 def find_nearest2D(array2D, dimx, dimy, xvalue, yvalue): # find the nearest element of the array to a certain value and return the index of that element
     idx = (np.abs(dimx - xvalue)).argmin()
     idy = (np.abs(dimy - yvalue)).argmin()
-    return array2D[idy,idx]
+    return array2D[idy,idx], idx, idy
     # return array[idx]
 
 
@@ -58,6 +58,35 @@ def find_nearest2D(array2D, dimx, dimy, xvalue, yvalue): # find the nearest elem
 
 
 def fdr_source_weighted(dataset, meas_params):
+    # Here we will calculate the TG-43 contribution to the dose at the measured point by all the other sources.
+    # We first need to load F (anisotropy) and g (radial) tables for the mHDR source.
+    with open("Tables/mHDR-v2_Anisotropy.csv", "r") as csv_aniso:  # reading the anisotropy function
+        csvReader = csv.reader(csv_aniso, delimiter=',')
+        x = list(csvReader)
+        Dataset = np.array(x).astype(np.float)
+        dimx = Dataset[0,1:]
+        dimy = Dataset[1:,0]
+        Aniso = Dataset[1:,1:]
+
+    with open("Tables/mHDR-v2_Radial-Dose.csv", "r") as csv_radose:  # reading the radial dose function
+        csvReader = csv.reader(csv_radose, delimiter=',')
+        x = list(csvReader)
+        Dataset = np.array(x).astype(np.float)
+        dim = Dataset[:, 0]
+        Radose = Dataset[:, 1]
+
+    # Data for the Ir 192 HDR Brachy source by Nucletron
+    L_active = 0.35 # cm (active size fo the source)
+    DRC_mHDR_v2 = 1.109 # cm (dose rate constant)
+    DRC_mHDR_v2r = 1.1121 # cm (dose rate constant)
+    beta_0 = 2* atan(L_active/2) # In radians
+    print(beta_0, 'rad')
+    exit(0)
+
+
+
+
+
     x = meas_params[0]  # x coordinate of the measurement point
     y = meas_params[1]  # y coordinate of the measurement point
     z = meas_params[2]  # z coordinate of the measurement point
@@ -80,16 +109,25 @@ def fdr_source_weighted(dataset, meas_params):
     k = 0
     for step in radius:
         print('step=', step)
-        for i in range(0, dataset[0x300a, 0x0230][0][0x300a, 0x0280].VM):
-            for j in range(0, dataset[0x300a, 0x0230][0][0x300a, 0x0280][i][0x300a,0x02d0].VM):  # now we will cycle through all the catheters to see if they fit inside the search radius
-                # print(i,step,dataset[0x300a, 0x0230][0][0x300a, 0x0280][i][0x1001, 0x1080][0][0x1001, 0x1083].value)
+        for i in range(0, dataset[0x300a, 0x0230][0][0x300a, 0x0280].VM): # cycle through all catheters
+            print(dataset[0x300a, 0x0230][0][0x300a, 0x0280][i][0x300a, 0x0286]) # this is the channel total time
+            for j in range(1, dataset[0x300a, 0x0230][0][0x300a, 0x0280][i][0x300a,0x02d0].VM, 2):  # now we will cycle through all the sources
                 xc, yc, zc = dataset[0x300a, 0x0230][0][0x300a, 0x0280][i][0x300a,0x02d0][j][0x300a, 0x02d4].value
-                source_dist = sqrt((x - xc) * (x - xc) + (y - yc) * (y - yc) + (z - zc) * (z - zc))  # now we calculate the distance from the catheter to the measurement point
-                if source_dist > step and source_dist < step + delta:
-                    if j==0:
-                        counts[k] = counts[k] + dataset[0x300a, 0x0230][0][0x300a, 0x0280][i][0x300a,0x02d0][j][0x300a, 0x02d6].value/source_dist # time info is in ms
-                    else:
-                        counts[k] = counts[k] + (dataset[0x300a, 0x0230][0][0x300a, 0x0280][i][0x300a, 0x02d0][j][0x300a, 0x02d6].value - dataset[0x300a, 0x0230][0][0x300a, 0x0280][i][0x300a, 0x02d0][j-1][0x300a, 0x02d6].value)/source_dist # time info is in ms
+                time = dataset[0x300a, 0x0230][0][0x300a, 0x0280][i][0x300a,0x02d0][j][0x300a, 0x02d6].value
+                r_mm = sqrt((x - xc) * (x - xc) + (y - yc) * (y - yc) + (z - zc) * (z - zc))  # now we calculate the distance from the source to the measurement point
+                r_cm = r_mm/10
+                theta_rad = acos( abs(z - zc)/r_mm )
+                theta_deg=degrees(theta_rad)
+                # Now we retrieve the table information
+                gl,_ = find_nearest(Radose, dim, r_cm)
+                F,_,_= find_nearest2D(Aniso, dimx, dimy, r_cm, theta_deg)
+                # GL =
+                # GL_ref =
+                print(time)
+        #         now we need to subtract the time to get rid of the cumulative time and have a specific time
+
+
+
         k = k + 1
     # print('radius=', radius, 'counts=', counts)
 
@@ -97,7 +135,6 @@ def fdr_source_weighted(dataset, meas_params):
     #    print(radius,radius[-1])
 
     radius2 = np.linspace(0, radius[-1], 1001, endpoint=True)
-    # print(radius, radius2)
     # bspl = splrep(radius,counts,s=3)
 
     return radius2, fdr
@@ -140,7 +177,7 @@ def fdr_source(dataset, meas_params):
     for step in radius:
         print('step=', step)
         for i in range(0, dataset[0x300a, 0x0230][0][0x300a, 0x0280].VM):
-            for j in range(0, dataset[0x300a, 0x0230][0][0x300a, 0x0280][i][0x300a,0x02d0].VM):  # now we will cycle through all the catheters to see if they fit inside the search radius
+            for j in range(1, dataset[0x300a, 0x0230][0][0x300a, 0x0280][i][0x300a,0x02d0].VM, 2):  # now we will cycle through all the catheters to see if they fit inside the search radius
                 # print(i,step,dataset[0x300a, 0x0230][0][0x300a, 0x0280][i][0x1001, 0x1080][0][0x1001, 0x1083].value)
                 xc, yc, zc = dataset[0x300a, 0x0230][0][0x300a, 0x0280][i][0x300a,0x02d0][j][0x300a, 0x02d4].value
                 source_dist = sqrt((x - xc) * (x - xc) + (y - yc) * (y - yc) + (z - zc) * (z - zc))  # now we calculate the distance from the catheter to the measurement point
@@ -246,7 +283,8 @@ def process_plan(filename,meas_params):
         radius2, fdr2 = fdr_cath(dataset, meas_params)
     elif answers["type"] == 'Source':
         radius2, fdr2 = fdr_source(dataset, meas_params)
-    elif answers["type"] == 'Source weighted by time and distance':
+    elif answers["type"] == 'Source weighted':
+        print(meas_params)
         radius2, fdr2 = fdr_source_weighted(dataset, meas_params)
 
 

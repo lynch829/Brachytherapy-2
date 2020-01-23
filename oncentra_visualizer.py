@@ -42,7 +42,9 @@
 
 import argparse
 import os
+import csv
 from mayavi import mlab
+import numpy as np
 import matplotlib.pyplot as plt
 import oncdose
 import oncplan
@@ -90,6 +92,10 @@ if args.structure:
     print(structname.name)
     # using mayavi
     elem_data = oncstruct.process_file(structname.name)
+    print('elem_data',elem_data[0,:], np.shape(elem_data),type(elem_data))
+    # with open("test.csv","w+") as my_csv:            # writing the file as my_csv
+    #     csvWriter = csv.writer(my_csv,delimiter=',')  # using the csv module to write the file
+    #     csvWriter.writerows(elem_data)
     # using matplotlib
     # elem_data = oncstruct.process_file(structname.name, fig, ax)
 
