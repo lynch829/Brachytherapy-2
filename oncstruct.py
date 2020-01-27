@@ -10,7 +10,7 @@ Date:2019-05-10
 
 """
 
-
+import os
 from mayavi import mlab
 
 import numpy as np
@@ -25,6 +25,9 @@ import pydicom
 
 # using mayavi
 def process_file(filename):
+    dirname=os.path.dirname(filename)
+    base=os.path.basename(filename)
+    file =os.path.splitext(base)
     # using matplotlib
     # def process_file(filename, fig, ax):
     dataset = pydicom.dcmread(filename)
@@ -41,7 +44,7 @@ def process_file(filename):
         desc_item.append(
             (
                 int(item[0x3006, 0x0084].value),
-                item[0x3006, 0x0088].value,
+                #item[0x3006, 0x0088].value,
                 item[0x3006, 0x00A4].value,
             )
         )
@@ -86,6 +89,12 @@ def process_file(filename):
             mlab.plot3d(xs_el, ys_el, zs_el, tube_radius=0.1, color=col)
 
 
+            # here we print the center of mass of the structre, defined as the average of the x, y and z components,
+            print('x_ave=',np.average(xs_el))
+            print('y_ave=',np.average(ys_el))
+            print('z_ave=',np.average(zs_el))
+
+
             # Do you you want to save csv files of every structure in the dicom file
             while True:  # example of infinite loops using try and except to catch only numbers
                 line = input("Do you you want to save csv files of structure "+str(desc_item[k, :])+" in the dicom file? [yes(y)/no(n)]> ")
@@ -101,8 +110,9 @@ def process_file(filename):
 
             if ioption.startswith(("y", "yeah", "yes")):
                 elem = np.transpose(np.vstack((xs_el,ys_el,zs_el)))
-                with open("struct"+str(k)+".csv","w+") as my_csv:            # writing the file as my_csv
+                with open(dirname+"/"+file[0]+"_struct"+str(k)+".csv","w+") as my_csv:            # writing the file as my_csv
                     csvWriter = csv.writer(my_csv,delimiter=',')  # using the csv module to write the file
+                    csvWriter.writerow(['x','y','z'])
                     csvWriter.writerows(elem)
 
 

@@ -368,7 +368,8 @@ def process_struct(filename, fig):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-s', '--structure', nargs='?', type=argparse.FileType('r'), help='structure file, in DICOM format')
+#parser.add_argument('-s', '--structure', nargs='?', type=argparse.FileType('r'), help='structure file, in DICOM format')
+parser.add_argument('structure',type=str,help="Input the structure file, in DICOM format")
 args=parser.parse_args()
 
 
@@ -382,4 +383,5 @@ ax.set_zlabel('z distance [mm]')
 
 if args.structure:
     structname = args.structure
-    process_struct(structname.name,fig)
+    process_struct(structname,fig)
+    #process_struct(structname.name,fig)

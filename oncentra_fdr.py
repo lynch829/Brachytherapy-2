@@ -52,8 +52,9 @@ def find_nearest2D(array2D, dimx, dimy, xvalue, yvalue): # find the nearest elem
     idy = (np.abs(dimy - yvalue)).argmin()
     return array2D[idy,idx], idx, idy
     # return array[idx]
+    
 
-
+# after we find the nearest we will have to perform a bilinear interpolation to find the appropriate value for the measured coordinates.
 
 
 

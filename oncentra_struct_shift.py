@@ -136,7 +136,7 @@ def process_struct(filename, meas_params, dirname, structname_o, fig):
 parser = argparse.ArgumentParser()
 # parser.add_argument('-s', '--structure', nargs='?', type=argparse.FileType('r'), help='structure file, in DICOM format')
 parser.add_argument('structure',type=str,help="Input the structure file")
-parser.add_argument("-o", "--output", nargs="?", type=argparse.FileType("w"), help="output structure file, in DICOM format",)
+parser.add_argument("-o", "--output", nargs="?", type=argparse.FileType("w"), help="output structure filename, the file will be located in the same folder as the original, in DICOM format",)
 parser.add_argument('-m' ,'--measurement' , nargs=3, metavar=('x', 'y', 'z'),
                         help="Specify the shift in x, y, z in mm", type=float,
                         default=[0,0,0])
