@@ -75,6 +75,7 @@ def fdr_source_weighted(dataset, meas_params):
         Dataset = np.array(x).astype(np.float)
         dim = Dataset[:, 0]
         Radose = Dataset[:, 1]
+        
 
     # Data for the Ir 192 HDR Brachy source by Nucletron
     L_active = 0.35 # cm (active size fo the source)
@@ -82,9 +83,8 @@ def fdr_source_weighted(dataset, meas_params):
     DRC_mHDR_v2r = 1.1121 # cm (dose rate constant)
     beta_0 = 2* atan(L_active/2) # In radians
     print(beta_0, 'rad')
-    exit(0)
 
-
+    
 
 
 
@@ -119,7 +119,44 @@ def fdr_source_weighted(dataset, meas_params):
                 r_cm = r_mm/10
                 theta_rad = acos( abs(z - zc)/r_mm )
                 theta_deg=degrees(theta_rad)
+                if theta_deg < 0:
+                    theta_deg = -theta_deg
+                if theta_deg > 180:
+                    theta_deg = 360 - theta_deg
+
+
+
+
                 # Now we retrieve the table information
+                print('r_cm',r_cm)
+                r2= dim[dim>r_cm].min()  #where r2 is the higher limit and r1 is the lower limit 
+                r1= dim[dim<r_cm].max() 
+                gr2,_ = find_nearest(Radose,dim,r2)
+                gr1,_ = find_nearest(Radose,dim,r1)
+                gl = gr1+(r_cm-r1)*((gr2-gr1)/(r2-r1) ) # linear interpolation to find gl
+
+
+
+                r2= dimx[dimx>r_cm].min()  #where r2 is the higher limit and r1 is the lower limit 
+                r1= dimx[dimx<r_cm].max() 
+                theta2= dimy[dimy>theta_deg].min()  #where r2 is the higher limit and r1 is the lower limit 
+                theta1= dimy[dimy<theta_deg].max() 
+                
+
+                Fr1th1,_,_= find_nearest2D(Aniso, dimx, dimy, r1, theta1)
+                Fr1th2,_,_= find_nearest2D(Aniso, dimx, dimy, r1, theta2)
+                Fr2th1,_,_= find_nearest2D(Aniso, dimx, dimy, r2, theta1)
+                Fr2th2,_,_= find_nearest2D(Aniso, dimx, dimy, r2, theta2)
+
+                F1 = Fr1th1 + (theta_deg-theta1)*((Fr1th2-Fr1th1)/(theta2-theta1))
+                F2 = Fr2th1 + (theta_deg-theta1)*((Fr2th2-Fr2th1)/(theta2-theta1))
+
+                F=F1 + (r_cm-r1)*((F2-F1)/(r2-r1))
+
+                print(theta_deg,theta1,theta2,r_cm,r1,r2,F)
+                exit(0)  #WORKING HERE now we need to deal with extrapolation cases and limit cases (page 334) Oncentra manual in addition we also need to redefine the table according to the manual for the appropriate model.
+
+
                 gl,_ = find_nearest(Radose, dim, r_cm)
                 F,_,_= find_nearest2D(Aniso, dimx, dimy, r_cm, theta_deg)
                 # GL =
