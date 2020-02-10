@@ -1,6 +1,6 @@
 ###########################################################################################
 #
-#   Script name: xx-OncentraStruct
+#   Script name: oncentra_plan_editor
 #
 #   Description: Tool for processing of Oncentra structure files
 #

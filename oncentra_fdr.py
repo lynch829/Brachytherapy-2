@@ -111,18 +111,76 @@ def fdr_source_weighted(dataset, meas_params):
     for step in radius:
         print('step=', step)
         for i in range(0, dataset[0x300a, 0x0230][0][0x300a, 0x0280].VM): # cycle through all catheters
+            channel_time=dataset[0x300a, 0x0230][0][0x300a, 0x0280][i][0x300a, 0x0286].value # this is the channel total time
             print(dataset[0x300a, 0x0230][0][0x300a, 0x0280][i][0x300a, 0x0286]) # this is the channel total time
             for j in range(1, dataset[0x300a, 0x0230][0][0x300a, 0x0280][i][0x300a,0x02d0].VM, 2):  # now we will cycle through all the sources
-                xc, yc, zc = dataset[0x300a, 0x0230][0][0x300a, 0x0280][i][0x300a,0x02d0][j][0x300a, 0x02d4].value
+                xc, yc, zc = dataset[0x300a, 0x0230][0][0x300a, 0x0280][i][0x300a,0x02d0][j][0x300a, 0x02d4].value  #source location coordinates
                 time = dataset[0x300a, 0x0230][0][0x300a, 0x0280][i][0x300a,0x02d0][j][0x300a, 0x02d6].value
                 r_mm = sqrt((x - xc) * (x - xc) + (y - yc) * (y - yc) + (z - zc) * (z - zc))  # now we calculate the distance from the source to the measurement point
+                r1_mm = sqrt((x - xc) * (x - xc) + (y - yc) * (y - yc) + (z - zc - L_active*10/2) * (z - zc - L_active*10/2))  # now we calculate the distance from the source to the measurement point
+                r2_mm = sqrt((x - xc) * (x - xc) + (y - yc) * (y - yc) + (z - zc + L_active*10/2) * (z - zc + L_active*10/2))  # now we calculate the distance from the source to the measurement point
                 r_cm = r_mm/10
+
                 theta_rad = acos( abs(z - zc)/r_mm )
-                theta_deg=degrees(theta_rad)
+                theta_deg = degrees(theta_rad)
+
+                if theta_deg == 0:
+                    GL=1/(r_cm * r_cm - (L_active/2) * (L_active/2))
+
+                else:
+                    theta1_rad = acos( abs(z - zc - L_active*10/2)/r1_mm )
+                    theta1_deg = degrees(theta1_rad) #this is the angle subtended by the edge of the source
+
+                    theta2_rad = acos( abs(z - zc + L_active*10/2)/r2_mm )
+                    theta2_deg = degrees(theta2_rad) #this is the angle subtended by the other edge of the source
+
+                    GL=abs(theta2_rad - theta1_rad)/(L_active * r_cm * sin(theta_rad))
+
+                GL0=2*atan(0.35)/(L_active * 1 * sin(np.pi/2))
+
+                print('here',x,y,z,xc,yc,zc)
+                print('here',theta_deg, theta1_deg, theta2_deg, r1_mm, r2_mm, r_mm, abs(theta2_deg - theta1_deg),sin(np.pi/2))
+                print('GL0=',GL0,'GL=',GL)
+                exit(0)
+                
+
+
+                print(r_mm, r1_mm, r2_mm, theta_deg, theta1_deg, theta2_deg)
+
+
                 if theta_deg < 0:
                     theta_deg = -theta_deg
                 if theta_deg > 180:
                     theta_deg = 360 - theta_deg
+
+                theta2= dimy[dimy>theta_deg].min()  #where theta2 is the higher limit and theta1 is the lower limit in the table 
+                theta1= dimy[dimy<theta_deg].max() 
+
+                if r_cm > dimx[-1]:  #then we perform extrapolation. see page 334 Oncentra Reference Manual
+                    Fr1th1,_,_= find_nearest2D(Aniso, dimx, dimy, dim[-2], theta1)
+                    Fr1th2,_,_= find_nearest2D(Aniso, dimx, dimy, dim[-2], theta2)
+                    Fr2th1,_,_= find_nearest2D(Aniso, dimx, dimy, dim[-1], theta1)
+                    Fr2th2,_,_= find_nearest2D(Aniso, dimx, dimy, dim[-1], theta2)
+
+                    F1 = Fr1th1 + (theta_deg-theta1)*((Fr1th2-Fr1th1)/(theta2-theta1))
+                    F2 = Fr2th1 + (theta_deg-theta1)*((Fr2th2-Fr2th1)/(theta2-theta1))
+                    
+                    F=F1 + (r_cm-dim[-1])*((F2-F1)/(dim[-1]-dim[-2]))
+
+
+                else:      #then we perform interpolation. see page 334 Oncentra Reference Manual
+                    r2= dimx[dimx>r_cm].min()  #where r2 is the higher limit and r1 is the lower limit in the table
+                    r1= dimx[dimx<r_cm].max() 
+
+                    Fr1th1,_,_= find_nearest2D(Aniso, dimx, dimy, r1, theta1)
+                    Fr1th2,_,_= find_nearest2D(Aniso, dimx, dimy, r1, theta2)
+                    Fr2th1,_,_= find_nearest2D(Aniso, dimx, dimy, r2, theta1)
+                    Fr2th2,_,_= find_nearest2D(Aniso, dimx, dimy, r2, theta2)
+
+                    F1 = Fr1th1 + (theta_deg-theta1)*((Fr1th2-Fr1th1)/(theta2-theta1))
+                    F2 = Fr2th1 + (theta_deg-theta1)*((Fr2th2-Fr2th1)/(theta2-theta1))
+
+                    F=F1 + (r_cm-r1)*((F2-F1)/(r2-r1))
 
 
 
@@ -137,31 +195,11 @@ def fdr_source_weighted(dataset, meas_params):
 
 
 
-                r2= dimx[dimx>r_cm].min()  #where r2 is the higher limit and r1 is the lower limit 
-                r1= dimx[dimx<r_cm].max() 
-                theta2= dimy[dimy>theta_deg].min()  #where r2 is the higher limit and r1 is the lower limit 
-                theta1= dimy[dimy<theta_deg].max() 
                 
-
-                Fr1th1,_,_= find_nearest2D(Aniso, dimx, dimy, r1, theta1)
-                Fr1th2,_,_= find_nearest2D(Aniso, dimx, dimy, r1, theta2)
-                Fr2th1,_,_= find_nearest2D(Aniso, dimx, dimy, r2, theta1)
-                Fr2th2,_,_= find_nearest2D(Aniso, dimx, dimy, r2, theta2)
-
-                F1 = Fr1th1 + (theta_deg-theta1)*((Fr1th2-Fr1th1)/(theta2-theta1))
-                F2 = Fr2th1 + (theta_deg-theta1)*((Fr2th2-Fr2th1)/(theta2-theta1))
-
-                F=F1 + (r_cm-r1)*((F2-F1)/(r2-r1))
-
-                print(theta_deg,theta1,theta2,r_cm,r1,r2,F)
-                exit(0)  #WORKING HERE now we need to deal with extrapolation cases and limit cases (page 334) Oncentra manual in addition we also need to redefine the table according to the manual for the appropriate model.
-
-
-                gl,_ = find_nearest(Radose, dim, r_cm)
-                F,_,_= find_nearest2D(Aniso, dimx, dimy, r_cm, theta_deg)
-                # GL =
-                # GL_ref =
-                print(time)
+                print('source',j,theta_deg,theta1,theta2,r_cm,r1,r2,F)
+                print('time(%)',time)
+                print('time(s)',time*channel_time/100)
+                #WORKING HERE now we need to deal with redefine the table according to the manual for the appropriate model.
         #         now we need to subtract the time to get rid of the cumulative time and have a specific time
 
 

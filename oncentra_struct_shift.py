@@ -109,7 +109,6 @@ def process_struct(filename, meas_params, dirname, structname_o, fig):
         print(dirname,structname_o)
         dataset.save_as(dirname + '/' + structname_o + '.dcm')
 
-#the section below is for more accurate calculations of the volume
 
 
 
